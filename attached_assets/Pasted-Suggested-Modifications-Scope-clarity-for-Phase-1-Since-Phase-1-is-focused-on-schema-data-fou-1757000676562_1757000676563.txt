@@ -1,0 +1,74 @@
+Suggested Modifications:
+
+Scope clarity for Phase 1
+Since Phase 1 is focused on schema & data foundation, keep user/auth tables stubbed (empty, no logic yet). That work (Brevo, API keys, logging) belongs to Phase 3.
+
+✅ Include movies, movie_genres, movie_cast.
+
+✅ Design users, email_verifications, api_keys, usage_logs, daily_usage tables now (empty).
+
+❌ Don’t implement email verification or usage logging yet.
+
+Schema adjustments:
+
+movies → should have id, title, year, runtime, rating, poster_url.
+
+movie_genres → many-to-many (movie_id, genre).
+
+movie_cast → many-to-many (movie_id, actor_name, role).
+
+users (stub for now) → (id, email, password_hash, is_verified).
+
+email_verifications (stub for now) → (user_id, otp_code, expiry).
+
+api_keys (stub for now) → (user_id, api_key, created_at, is_active).
+
+usage_logs (stub for now) → (api_key_id, endpoint, timestamp, status_code).
+
+daily_usage (stub for now) → (api_key_id, date, request_count).
+
+👉 This ensures forward compatibility when Phase 3 starts.
+
+CSV validation system:
+
+Required fields: title, year, genre, runtime.
+
+Year range: 1900–2025.
+
+Runtime > 0.
+
+Genre in predefined set (Action, Drama, Comedy, etc).
+
+Poster URL → skip for now (will add with Cloudinary in Phase 2).
+
+Idempotent Import:
+
+Use title+year as natural key to prevent duplicates.
+
+Dry-run mode = validate CSV and show report without inserting.
+
+🎯 Phase 1 Final Scope (corrected)
+
+Deliverables:
+
+Full schema defined (8 tables).
+
+50-movie CSV curated across decades/genres.
+
+Validator checks formatting + rules.
+
+Importer runs idempotently (safe re-runs).
+
+Checks:
+
+Run CSV → DB filled with 50 movies.
+
+Re-run CSV → no duplicates.
+
+Invalid CSV (e.g., year 1800) → rejected with error.
+
+All tables exist in DB, though some are empty (users/auth reserved).
+
+By end of Phase 1, you’ll have a solid database + clean sample data to power API endpoints in Phase 2.
+
+So finish only Phase 1 perfectly and show me correct output as i expect

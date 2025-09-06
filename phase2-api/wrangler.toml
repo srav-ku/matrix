@@ -1,0 +1,14 @@
+name = "movie-database-api"
+main = "src/index.js"
+compatibility_date = "2024-03-08"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "movie-database"
+database_id = "movie-database"
+
+[env.production]
+name = "movie-database-api"
+d1_databases = [
+  { binding = "DB", database_name = "movie-database", database_id = "movie-database" }
+]
