@@ -26,5 +26,10 @@
   "devDependencies": {
     "eslint": "^8",
     "eslint-config-next": "15.5.2"
-  }
+  },
+  "main": "next.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }

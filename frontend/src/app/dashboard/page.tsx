@@ -72,11 +72,11 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="flex h-screen bg-gray-950 text-white">
+    <div className="flex h-screen bg-black text-white">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 p-6 flex flex-col">
+      <div className="w-64 bg-black border-r border-gray-800 p-6 flex flex-col">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">ezId</h1>
+          <h1 className="text-2xl font-bold text-green-400">The Matrix</h1>
         </div>
 
         <nav className="flex-1">
@@ -119,21 +119,21 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="border-b border-gray-800 p-6 flex justify-between items-center">
+        <header className="border-b border-gray-800 px-6 py-4 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-semibold">Welcome</h2>
             <p className="text-gray-400">Sed ut perspiciatis unde omnis iste natus error sit voluptatem</p>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-gray-400">Docs</span>
-            <span className="text-gray-400">ezid.io</span>
+            <span className="text-gray-400 cursor-pointer hover:text-white">Docs</span>
+            <span className="text-gray-400 cursor-pointer hover:text-white">ezid.io</span>
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-black" />
               </div>
-              <div>
-                <p className="text-sm font-medium">Mike Malex</p>
-                <p className="text-xs text-gray-400">Logout</p>
+              <div className="text-right">
+                <p className="text-sm font-medium">Mike Males</p>
+                <p className="text-xs text-gray-400 cursor-pointer hover:text-white">Logout</p>
               </div>
             </div>
           </div>
@@ -141,40 +141,24 @@ export default function Dashboard() {
 
         {/* Content */}
         <main className="flex-1 p-6 overflow-auto">
-          {/* Stats Section */}
-          <div className="grid grid-cols-4 gap-6 mb-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold mb-2">{activeUsers}</div>
-              <div className="text-sm text-gray-400">Active Users</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold mb-2">{magicLinks}</div>
-              <div className="text-sm text-gray-400">Magic Links</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold mb-2">{smsOTP}</div>
-              <div className="text-sm text-gray-400">SMS OTP</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold mb-2">Active Users</div>
-              <div className="text-sm text-gray-400">Magic Links</div>
+          {/* Active Users Header */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-white">Active Users</h3>
+              <div className="flex space-x-6 text-sm">
+                <span className="text-white font-medium">Active Users</span>
+                <span className="text-gray-400">Magic Links</span>
+                <span className="text-gray-400">SMS OTP</span>
+              </div>
             </div>
           </div>
 
           {/* Chart */}
-          <div className="glass-card rounded-2xl p-6 mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold">Active Users</h3>
-              <div className="flex space-x-4 text-sm text-gray-400">
-                <span>Active Users</span>
-                <span>Magic Links</span>
-                <span>SMS OTP</span>
-              </div>
-            </div>
+          <div className="bg-black rounded-lg p-6 mb-8">
             
-            {/* Simple SVG Chart */}
-            <div className="h-64 relative">
-              <svg className="w-full h-full" viewBox="0 0 800 200">
+            {/* Chart matching uploaded image */}
+            <div className="h-80 relative">
+              <svg className="w-full h-full" viewBox="0 0 900 320">
                 <defs>
                   <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="0%" style={{ stopColor: '#22c55e', stopOpacity: 0.3 }} />
@@ -183,111 +167,123 @@ export default function Dashboard() {
                 </defs>
                 
                 {/* Grid lines */}
-                {[0, 1, 2, 3, 4].map(i => (
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                   <line
                     key={i}
-                    x1="0"
-                    y1={i * 40}
-                    x2="800"
-                    y2={i * 40}
+                    x1="50"
+                    y1={40 + i * 30}
+                    x2="850"
+                    y2={40 + i * 30}
                     stroke="#374151"
-                    strokeWidth="1"
+                    strokeWidth="0.5"
                   />
                 ))}
                 
-                {/* Chart line */}
+                {/* Y-axis labels */}
+                <text x="30" y="50" fill="#9CA3AF" fontSize="11">800M</text>
+                <text x="30" y="80" fill="#9CA3AF" fontSize="11">700M</text>
+                <text x="30" y="110" fill="#9CA3AF" fontSize="11">600M</text>
+                <text x="30" y="140" fill="#9CA3AF" fontSize="11">500M</text>
+                <text x="30" y="170" fill="#9CA3AF" fontSize="11">400M</text>
+                <text x="30" y="200" fill="#9CA3AF" fontSize="11">300M</text>
+                <text x="30" y="230" fill="#9CA3AF" fontSize="11">200M</text>
+                <text x="30" y="260" fill="#9CA3AF" fontSize="11">100M</text>
+                <text x="40" y="290" fill="#9CA3AF" fontSize="11">0</text>
+                
+                {/* Chart line matching uploaded image curve */}
                 <path
-                  d="M50,150 Q150,120 250,100 Q350,80 450,60 Q550,45 650,30 Q750,20 750,15"
+                  d="M50,260 Q120,240 180,220 Q240,200 300,180 Q360,160 420,140 Q480,120 540,100 Q600,85 660,75 Q720,68 780,65 Q820,63 850,62"
                   stroke="#22c55e"
-                  strokeWidth="3"
+                  strokeWidth="2.5"
                   fill="none"
                 />
                 
-                {/* Fill area */}
+                {/* Fill area under curve */}
                 <path
-                  d="M50,150 Q150,120 250,100 Q350,80 450,60 Q550,45 650,30 Q750,20 750,15 L750,200 L50,200 Z"
+                  d="M50,260 Q120,240 180,220 Q240,200 300,180 Q360,160 420,140 Q480,120 540,100 Q600,85 660,75 Q720,68 780,65 Q820,63 850,62 L850,290 L50,290 Z"
                   fill="url(#gradient)"
                 />
                 
-                {/* Data points */}
-                {chartData.map((point, index) => (
-                  <circle
-                    key={index}
-                    cx={50 + index * 100}
-                    cy={200 - (point.users / 6)}
-                    r="4"
-                    fill="#22c55e"
-                    className="animate-pulse"
-                  />
+                {/* X-axis numbers */}
+                {[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22].map((num) => (
+                  <text key={num} x={50 + num * 35} y="305" fill="#9CA3AF" fontSize="10">{num}</text>
                 ))}
               </svg>
               
-              {/* X-axis labels */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-400 px-12">
-                {['0', '3', '6', '9', '12', '15', '18', '21'].map(time => (
-                  <span key={time}>{time}</span>
-                ))}
-              </div>
             </div>
           </div>
 
           {/* Example Apps */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold mb-6">Explore example apps</h3>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Magic Link */}
-              <div className="glass-card rounded-2xl p-6">
-                <h4 className="text-lg font-semibold mb-4">Magic link</h4>
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <Activity className="w-5 h-5" />
+              <div className="bg-gray-900/50 rounded-lg p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <div className="w-6 h-6 bg-blue-500 rounded"></div>
                   </div>
-                  <span className="text-sm text-gray-400">React + JS</span>
-                  <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
-                    <span className="text-xs text-black font-bold">N</span>
+                  <span className="text-white font-medium">Magic link</span>
+                </div>
+                
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
+                    <span className="text-gray-400">React + JS</span>
                   </div>
-                  <span className="text-sm text-gray-400">Node GitHub</span>
-                  <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center">
-                    <span className="text-xs text-white font-bold">M</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-green-500 rounded-sm"></div>
+                    <span className="text-gray-400">Node GitHub</span>
                   </div>
-                  <span className="text-sm text-gray-400">Mongo DB</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-green-600 rounded-sm"></div>
+                    <span className="text-gray-400">Mongo DB</span>
+                  </div>
                 </div>
               </div>
 
               {/* SMS OTP */}
-              <div className="glass-card rounded-2xl p-6">
-                <h4 className="text-lg font-semibold mb-4">SMS OTP</h4>
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <Activity className="w-5 h-5" />
+              <div className="bg-gray-900/50 rounded-lg p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                    <MessageSquare className="w-6 h-6 text-orange-500" />
                   </div>
-                  <span className="text-sm text-gray-400">React + JS</span>
-                  <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
-                    <span className="text-xs text-black font-bold">N</span>
+                  <span className="text-white font-medium">SMS OTP</span>
+                </div>
+                
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
+                    <span className="text-gray-400">React + JS</span>
                   </div>
-                  <span className="text-sm text-gray-400">Node GitHub</span>
-                  <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center">
-                    <span className="text-xs text-white font-bold">M</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-green-500 rounded-sm"></div>
+                    <span className="text-gray-400">Node GitHub</span>
                   </div>
-                  <span className="text-sm text-gray-400">Mongo DB</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-green-600 rounded-sm"></div>
+                    <span className="text-gray-400">Mongo DB</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Documentation */}
-          <div className="glass-card rounded-2xl p-6">
-            <h3 className="text-xl font-semibold mb-4">Documentation & support</h3>
-            <div className="flex items-start space-x-4">
-              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                <HelpCircle className="w-6 h-6 text-green-500" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold mb-2">Documentation & support</h4>
-                <p className="text-gray-400">
-                  Learn how to quickly connect and deploy EZID by reading our extensive documentation. 
-                  If you have questions or need assistance, join our community Slack channel to talk to us. We're here to help!
-                </p>
+          <div>
+            <h3 className="text-xl font-semibold mb-6">Documentation & support</h3>
+            
+            <div className="bg-gray-900/50 rounded-lg p-6">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 bg-green-500 rounded"></div>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-2">Documentation & support</h4>
+                  <p className="text-gray-400 text-sm leading-relaxed">
+                    Learn how to quickly connect and deploy EzID by reading our extensive documentation. If you have questions or need assistance, join our community Slack channel to talk to us. We're here to help!
+                  </p>
+                </div>
               </div>
             </div>
           </div>
