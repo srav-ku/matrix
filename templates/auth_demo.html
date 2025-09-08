@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4 Authentication Demo - Movie Database API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem 0;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .demo-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .result {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196F3; }
+
+        .api-key {
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .step-number {
+            background: #4CAF50;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔐 Phase 4 Authentication Demo</h1>
+        <p>Complete Authentication System with Email Verification & API Key Management</p>
+    </div>
+
+    <div class="container">
+        <!-- Features Overview -->
+        <div class="demo-section">
+            <h2>✅ Implemented Features</h2>
+            <div class="features-grid">
+                <div class="feature">
+                    <div class="feature-icon">👤</div>
+                    <h3>User Registration</h3>
+                    <p>Email validation & domain filtering</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📧</div>
+                    <h3>Firebase Email Verification</h3>
+                    <p>Real emails sent through Firebase Auth</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔑</div>
+                    <h3>API Key Management</h3>
+                    <p>Secure key generation & validation</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Security Features</h3>
+                    <p>Rate limiting & abuse prevention</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <h3>Usage Analytics</h3>
+                    <p>API usage tracking & reporting</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🚫</div>
+                    <h3>Disposable Email Block</h3>
+                    <p>Prevents abuse from temp emails</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Sign Up -->
+        <div class="demo-section">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h2>User Registration</h2>
+            </div>
+            <p>Create a new user account. Only allowed domains: gmail.com, yahoo.com, outlook.com, hotmail.com</p>
+            
+            <div class="form-group">
+                <label for="signupEmail">Email Address:</label>
+                <input type="email" id="signupEmail" placeholder="your-email@gmail.com">
+            </div>
+            <div class="form-group">
+                <label for="signupPassword">Password:</label>
+                <input type="password" id="signupPassword" placeholder="minimum 8 characters">
+            </div>
+            
+            <button class="btn btn-primary" onclick="signup()">Create Account</button>
+            <button class="btn btn-warning" onclick="testInvalidDomain()">Test Invalid Domain</button>
+            
+            <div id="signupResult" class="result"></div>
+        </div>
+
+        <!-- Step 2: Verify Email -->
+        <div class="demo-section">
+            <div class="step">
+                <div class="step-number">2</div>
+                <h2>Email Verification</h2>
+            </div>
+            <p>📧 <strong>Check your email for Firebase verification link - click it to verify your account</strong></p>
+            
+            <div class="form-group">
+                <label for="verifyEmail">Email Address:</label>
+                <input type="email" id="verifyEmail" placeholder="your-email@gmail.com">
+            </div>
+            <div class="alert" style="background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                <strong>Important:</strong> You must click the verification link in your email first! 
+                After clicking the Firebase email link, come back here and use the verify button to get your API key.
+            </div>
+            
+            <button class="btn btn-primary" onclick="verifyEmail()">I Clicked the Email Link - Get My API Key</button>
+            <button class="btn btn-secondary" onclick="resendEmail()">Resend Verification Email</button>
+            
+            <div id="verifyResult" class="result"></div>
+        </div>
+
+        <!-- Step 3: Test API Key -->
+        <div class="demo-section">
+            <div class="step">
+                <div class="step-number">3</div>
+                <h2>Test API Key</h2>
+            </div>
+            <p>Test your API key with protected endpoints.</p>
+            
+            <div class="form-group">
+                <label for="apiKey">API Key:</label>
+                <input type="text" id="apiKey" placeholder="Your API key from verification">
+            </div>
+            
+            <button class="btn btn-primary" onclick="validateKey()">Validate Key</button>
+            <button class="btn btn-secondary" onclick="getProtectedMovies()">Get Protected Movies</button>
+            <button class="btn btn-secondary" onclick="getUserUsage()">Check Usage Stats</button>
+            
+            <div id="apiResult" class="result"></div>
+        </div>
+
+        <!-- Authentication Flow -->
+        <div class="demo-section">
+            <h2>🔄 Complete Authentication Flow</h2>
+            <div class="step">
+                <div class="step-number">!</div>
+                <div>
+                    <h3>Quick Test Flow</h3>
+                    <p>Run the complete authentication flow automatically</p>
+                    <button class="btn btn-primary" onclick="runCompleteFlow()">Run Complete Flow</button>
+                </div>
+            </div>
+            <div id="flowResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentVerificationCode = null;
+        let currentApiKey = null;
+
+        function displayResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<span class="${type}">${JSON.stringify(content, null, 2)}</span>`;
+        }
+
+        async function signup() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+
+            if (!email || !password) {
+                displayResult('signupResult', 'Please fill in both email and password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('verifyEmail').value = email;
+                    displayResult('signupResult', result, 'success');
+                } else {
+                    displayResult('signupResult', result, 'error');
+                }
+            } catch (error) {
+                displayResult('signupResult', { error: error.message }, 'error');
+            }
+        }
+
+        async function testInvalidDomain() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: 'test@tempmail.org', 
+                        password: 'testpassword123' 
+                    })
+                });
+
+                const result = await response.json();
+                displayResult('signupResult', { 
+                    message: 'Testing disposable email blocking', 
+                    result: result 
+                }, response.ok ? 'warning' : 'success');
+            } catch (error) {
+                displayResult('signupResult', { error: error.message }, 'error');
+            }
+        }
+
+        async function verifyEmail() {
+            const email = document.getElementById('verifyEmail').value;
+
+            if (!email) {
+                displayResult('verifyResult', 'Please enter your email address', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.api_key) {
+                    currentApiKey = result.api_key;
+                    document.getElementById('apiKey').value = currentApiKey;
+                    displayResult('verifyResult', result, 'success');
+                } else {
+                    displayResult('verifyResult', result, 'error');
+                }
+            } catch (error) {
+                displayResult('verifyResult', { error: error.message }, 'error');
+            }
+        }
+
+        async function resendEmail() {
+            const email = document.getElementById('verifyEmail').value;
+
+            if (!email) {
+                displayResult('verifyResult', 'Please enter your email address', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/resend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                const result = await response.json();
+                displayResult('verifyResult', result, response.ok ? 'success' : 'error');
+            } catch (error) {
+                displayResult('verifyResult', { error: error.message }, 'error');
+            }
+        }
+
+        async function validateKey() {
+            const apiKey = document.getElementById('apiKey').value;
+
+            if (!apiKey) {
+                displayResult('apiResult', 'Please enter an API key', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/validate`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+
+                const result = await response.json();
+                displayResult('apiResult', result, response.ok ? 'success' : 'error');
+            } catch (error) {
+                displayResult('apiResult', { error: error.message }, 'error');
+            }
+        }
+
+        async function getProtectedMovies() {
+            const apiKey = document.getElementById('apiKey').value;
+
+            if (!apiKey) {
+                displayResult('apiResult', 'Please enter an API key', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/protected/movies?limit=5`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResult('apiResult', {
+                        message: 'Protected endpoint access successful!',
+                        movie_count: result.movies?.length || 0,
+                        movies: result.movies?.slice(0, 3).map(m => ({
+                            title: m.title,
+                            year: m.year,
+                            director: m.director
+                        })) || []
+                    }, 'success');
+                } else {
+                    displayResult('apiResult', result, 'error');
+                }
+            } catch (error) {
+                displayResult('apiResult', { error: error.message }, 'error');
+            }
+        }
+
+        async function getUserUsage() {
+            const apiKey = document.getElementById('apiKey').value;
+
+            if (!apiKey) {
+                displayResult('apiResult', 'Please enter an API key', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/user/usage`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+
+                const result = await response.json();
+                displayResult('apiResult', result, response.ok ? 'success' : 'error');
+            } catch (error) {
+                displayResult('apiResult', { error: error.message }, 'error');
+            }
+        }
+
+        async function runCompleteFlow() {
+            displayResult('flowResult', 'Starting complete authentication flow...', 'info');
+            
+            const testEmail = `test${Math.floor(Math.random() * 10000)}@gmail.com`;
+            const testPassword = 'testpassword123';
+            
+            try {
+                // Step 1: Signup
+                displayResult('flowResult', `Step 1: Creating user ${testEmail}...`, 'info');
+                const signupResponse = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: testEmail, password: testPassword })
+                });
+                
+                const signupResult = await signupResponse.json();
+                if (!signupResponse.ok) throw new Error(signupResult.error);
+                
+                // Step 2: Note about email verification
+                displayResult('flowResult', 'Step 2: In a real scenario, you would click the Firebase email link. Demo skips this step...', 'warning');
+                
+                // For demo purposes, we'll just show that Firebase verification is required
+                displayResult('flowResult', '⚠️ Firebase email verification required - this demo cannot complete the full flow without manual email verification', 'warning');
+                return;
+                
+                const verifyResult = await verifyResponse.json();
+                if (!verifyResponse.ok) throw new Error(verifyResult.error);
+                
+                // Step 3: Test API Key
+                displayResult('flowResult', 'Step 3: Testing API key...', 'info');
+                const testResponse = await fetch(`${API_BASE}/protected/movies?limit=3`, {
+                    headers: { 'X-API-Key': verifyResult.api_key }
+                });
+                
+                const testResult = await testResponse.json();
+                if (!testResponse.ok) throw new Error(testResult.error);
+                
+                // Success!
+                displayResult('flowResult', {
+                    success: true,
+                    message: '🎉 Complete authentication flow successful!',
+                    steps: {
+                        signup: signupResult.message,
+                        verification: verifyResult.message,
+                        api_test: `Successfully accessed ${testResult.movies?.length || 0} movies`
+                    },
+                    generated_api_key: `${verifyResult.api_key.substring(0, 8)}...`,
+                    test_email: testEmail
+                }, 'success');
+                
+            } catch (error) {
+                displayResult('flowResult', { 
+                    error: 'Authentication flow failed', 
+                    details: error.message 
+                }, 'error');
+            }
+        }
+
+        // Auto-fill test data
+        document.getElementById('signupEmail').value = 'demo@gmail.com';
+        document.getElementById('signupPassword').value = 'demopassword123';
+    </script>
+</body>
+</html>

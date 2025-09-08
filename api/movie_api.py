@@ -12,7 +12,13 @@ sys.path.append('./src')
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from src.database import execute_query
+from src.auth import (
+    create_user, verify_user_email, resend_verification, 
+    validate_api_key, log_api_usage, AuthError, RateLimitError,
+    init_firebase
+)
 import json
+from functools import wraps
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 CORS(app)
@@ -20,10 +26,45 @@ CORS(app)
 # Configure Flask for development
 app.config['DEBUG'] = True
 
+# Initialize Firebase (will be set up when credentials are provided)
+firebase_initialized = init_firebase()
+
+def require_api_key(f):
+    """Decorator to require API key for protected endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key') or request.headers.get('Authorization')
+        if api_key and api_key.startswith('Bearer '):
+            api_key = api_key[7:]  # Remove 'Bearer ' prefix
+        
+        if not api_key:
+            return jsonify({'error': 'API key required'}), 401
+        
+        user_info = validate_api_key(api_key)
+        if not user_info:
+            return jsonify({'error': 'Invalid API key'}), 401
+        
+        # Log API usage
+        try:
+            log_api_usage(user_info['api_key_id'], request.endpoint, 200)
+        except:
+            pass  # Don't fail request if logging fails
+        
+        # Add user info to request context
+        request.user_info = user_info
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
 @app.route('/')
 def home():
     """Serve the main frontend"""
     return render_template('index.html')
+
+@app.route('/demo')
+def auth_demo():
+    """Serve the authentication demo page"""
+    return render_template('auth_demo.html')
 
 @app.route('/api/movies', methods=['GET'])
 def get_movies():
@@ -248,6 +289,124 @@ def search_movies():
             'count': len(enriched_movies)
         })
     
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# PHASE 4 - Authentication Endpoints
+
+@app.route('/api/auth/signup', methods=['POST'])
+def signup():
+    """User signup endpoint"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'JSON data required'}), 400
+        
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
+        
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters long'}), 400
+        
+        result = create_user(email, password)
+        return jsonify(result), 201
+        
+    except (AuthError, RateLimitError) as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Signup failed: {str(e)}'}), 500
+
+@app.route('/api/auth/verify', methods=['POST'])
+def verify_email():
+    """Email verification endpoint"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'JSON data required'}), 400
+        
+        email = data.get('email', '').strip().lower()
+        verification_code = data.get('verification_code', '').strip()
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        result = verify_user_email(email, verification_code)
+        return jsonify(result), 200
+        
+    except AuthError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Verification failed: {str(e)}'}), 500
+
+@app.route('/api/auth/resend', methods=['POST'])
+def resend_verification_email():
+    """Resend verification email endpoint"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'JSON data required'}), 400
+        
+        email = data.get('email', '').strip().lower()
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        result = resend_verification(email)
+        return jsonify(result), 200
+        
+    except (AuthError, RateLimitError) as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to resend verification: {str(e)}'}), 500
+
+@app.route('/api/auth/validate', methods=['GET'])
+@require_api_key
+def validate_key():
+    """Validate API key endpoint"""
+    return jsonify({
+        'valid': True,
+        'user_id': request.user_info['user_id'],
+        'email': request.user_info['email']
+    })
+
+@app.route('/api/protected/movies', methods=['GET'])
+@require_api_key
+def get_protected_movies():
+    """Protected movies endpoint requiring API key"""
+    # Same as get_movies but requires authentication
+    return get_movies()
+
+@app.route('/api/user/usage', methods=['GET'])
+@require_api_key
+def get_user_usage():
+    """Get user API usage statistics"""
+    try:
+        user_id = request.user_info['user_id']
+        
+        # Get daily usage for last 30 days
+        daily_usage = execute_query("""
+            SELECT date, request_count
+            FROM daily_usage du
+            JOIN api_keys ak ON du.api_key_id = ak.id
+            WHERE ak.user_id = %s AND date >= CURRENT_DATE - INTERVAL '30 days'
+            ORDER BY date DESC
+        """, (user_id,), fetch=True)
+        
+        # Get total usage
+        total_usage = execute_query("""
+            SELECT COUNT(*) as total_requests
+            FROM usage_logs ul
+            JOIN api_keys ak ON ul.api_key_id = ak.id
+            WHERE ak.user_id = %s
+        """, (user_id,), fetch=True)
+        
+        return jsonify({
+            'total_requests': total_usage[0]['total_requests'] if total_usage else 0,
+            'daily_usage': [dict(row) for row in daily_usage]
+        })
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

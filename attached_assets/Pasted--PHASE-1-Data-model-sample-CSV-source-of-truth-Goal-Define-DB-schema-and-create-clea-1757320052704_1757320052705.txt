@@ -1,0 +1,112 @@
+## PHASE 1 — Data model & sample CSV (source of truth)
+
+**Goal:** Define DB schema and create clean 50-row sample CSV.
+
+**Tasks**
+
+1. Finalize DB schema (tables): movies, movie_genres, movie_cast, users, email_verifications, api_keys, usage_logs, daily_usage.
+2. Create `data/sample_movies.csv` exactly with columns: `id,title,year,genre,director,actors,plot,poster_url`. Use pipe `|` to separate multi-values.
+3. Create a CSV validation checklist:
+    - Required fields present for each row (title & year mandatory)
+    - Year is numeric between 1900 and current year
+    - Genres/actors separated by `|`
+    - Poster URLs point to Cloudinary or are empty
+4. Create an importer plan (no code yet): importer should be idempotent, support dry-run, insert/update rows, and produce an import report.
+
+**Expected outcome**
+
+- Clean `sample_movies.csv` with 50 diverse movies across decades and genres.
+- Clear D1 schema plan and migration SQL ready.
+
+**How to test / Acceptance**
+
+- CSV has exactly the header and 50 rows.
+- A validation tool (or a Replit AI-generated validator) reports zero errors on the CSV.
+
+**Estimated time:** 3–6 hours (curating sample data)
+
+**Pitfalls**
+
+- Wrong separators (commas in plot) must be quoted; prefer simple plots to avoid CSV quoting issues.
+- Missing IDs — importer must generate UUIDs when id is absent.
+
+**Replit AI prompt (optional)**
+
+“Generate a clean 50-row sample_movies.csv with columns id,title,year,genre,director,actors,plot,poster_url. Use pipe `|` for multi-values and include diverse decades and genres.”
+
+---
+
+## PHASE 2 — D1 schema migration & CSV import tooling (no UI)
+
+**Goal:** Create D1 DB and an import routine that loads CSV into D1 (idempotent).
+
+**Tasks**
+
+1. Create DB schema migration SQL (init.sql) for all required tables and indexes.
+2. Use Cloudflare D1 console or Wrangler to run migration.
+3. Build an import routine (locally or as a Worker admin route) that:
+    - Runs in dry-run mode first to show report: inserted/updated/skipped/errors.
+    - On real run, upserts movie rows, handles splitting genre/actors, and updates indices.
+4. Import `sample_movies.csv` into D1.
+
+**Expected outcome**
+
+- D1 contains all movies and related genre/cast rows.
+- Upsert behavior works: re-running importer does not duplicate.
+
+**How to test / Acceptance**
+
+- Query D1: count of movies equals 50.
+- For a specific movie title, query DB returns expected fields including genres[] and actors[].
+- Re-run importer on same CSV: no duplicate movie entries.
+
+**Estimated time:** 4–8 hours
+
+**Pitfalls**
+
+- D1 SQL syntax differences — verify the migration tool compatibility.
+- Large CSVs might require streaming parsing; for 50 rows it’s trivial.
+
+**Replit AI prompt (optional)**
+
+“Create a secure Cloudflare D1 migration SQL to create tables for movies, movie_genres, movie_cast, users, email_verifications, api_keys, usage_logs, daily_usage, with appropriate indices and constraints. Also create an importer routine description that performs dry-run validation and idempotent upsert.”
+
+---
+
+## PHASE 3 — Core read-only API endpoints (public, edge)
+
+**Goal:** Deploy three reliable read endpoints (no auth yet) that return clean JSON from D1.
+
+**Endpoints**
+
+- `GET /movies?page=&per_page=&sort=&order=` ➜ paginated list
+- `GET /movies/{id}` ➜ single movie with genres & cast arrays
+- `GET /search?title=&year=&genre=` ➜ partial/combined filters
+
+**Tasks**
+
+1. Implement worker router and handlers for these endpoints.
+2. Query D1 efficiently (use parameterized queries; limit per_page <=50).
+3. Return stable JSON schema: fields `id,title,year,genre[],director,actors[],plot,poster_url`.
+4. Publish Worker to a test endpoint.
+
+**Expected outcome**
+
+- Worker returns JSON quickly (edge latency), endpoints match OpenAPI-style docs.
+
+**How to test / Acceptance**
+
+- Call `GET /movies` with per_page=10: response contains items, page metadata, total, has_next.
+- Call `GET /search?title=matrix` returns movie list containing “The Matrix”.
+- Call `GET /movies/{id}` returns full object including arrays.
+
+**Estimated time:** 6–10 hours
+
+**Pitfalls**
+
+- Improper joins: ensure genre/actor arrays are built for each movie.
+- Pagination total count may be slow for huge tables; for now 50 rows is fine.
+
+**Replit AI prompt (optional)**
+
+“Generate a Cloudflare Worker project that exposes GET /movies, GET /movies/{id}, GET /search endpoints reading from D1. Focus on correct JSON shape and efficient parameter handling. No auth required.”
