@@ -225,8 +225,13 @@ def create_user(email: str, password: str) -> Dict:
             }
             
         except Exception as firebase_error:
+            # Enhanced error reporting for debugging
+            error_message = str(firebase_error)
+            print(f"🐛 Firebase Error Details: {firebase_error}")
+            print(f"🐛 Error Type: {type(firebase_error).__name__}")
+            
             # If user already exists in Firebase, try to resend verification
-            if "already exists" in str(firebase_error).lower():
+            if "already exists" in error_message.lower():
                 try:
                     existing_firebase_user = firebase_auth.get_user_by_email(email)
                     if not existing_firebase_user.email_verified:
@@ -246,8 +251,11 @@ def create_user(email: str, password: str) -> Dict:
                         raise AuthError("User already exists and is verified in Firebase. Use the verify endpoint to get your API key.")
                 except Exception as resend_error:
                     raise AuthError(f"Firebase error: {str(firebase_error)}")
+            elif "invalid_grant" in error_message.lower():
+                # Specific handling for JWT signature errors
+                raise AuthError(f"Firebase credentials issue - JWT signature invalid. This may be due to: 1) Expired service account key, 2) Incorrect private key format, 3) Firebase project configuration issue. Error: {error_message}")
             else:
-                raise AuthError(f"Failed to create Firebase user: {str(firebase_error)}")
+                raise AuthError(f"Failed to create Firebase user: {error_message}")
             
     except (AuthError, RateLimitError) as e:
         raise e

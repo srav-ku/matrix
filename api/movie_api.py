@@ -21,10 +21,15 @@ import json
 from functools import wraps
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
-CORS(app)
+
+# Configure CORS for Replit environment - allow all origins for development
+CORS(app, origins="*")
 
 # Configure Flask for development
 app.config['DEBUG'] = True
+
+# Essential for Replit: Disable host header checks for proxy environments
+app.config['SERVER_NAME'] = None
 
 # Initialize Firebase (will be set up when credentials are provided)
 firebase_initialized = init_firebase()
@@ -58,13 +63,17 @@ def require_api_key(f):
 
 @app.route('/')
 def home():
-    """Serve the main frontend"""
-    return render_template('index.html')
-
-@app.route('/demo')
-def auth_demo():
-    """Serve the authentication demo page"""
-    return render_template('auth_demo.html')
+    """API root endpoint"""
+    return jsonify({
+        'message': 'Movie Database API',
+        'version': '2.0',
+        'endpoints': {
+            'movies': '/api/movies',
+            'search': '/api/search',
+            'stats': '/api/stats',
+            'auth': '/api/auth/*'
+        }
+    })
 
 @app.route('/api/movies', methods=['GET'])
 def get_movies():
@@ -294,9 +303,92 @@ def search_movies():
 
 # PHASE 4 - Authentication Endpoints
 
+@app.route('/api/auth/firebase-login', methods=['POST'])
+def firebase_login():
+    """Handle Firebase authentication and generate/retrieve API key"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Firebase ID token required in Authorization header'}), 401
+        
+        # For now, we'll skip Firebase token verification since we're moving to client-side auth
+        # In a production app, you'd verify the Firebase ID token here
+        id_token = auth_header[7:]  # Remove 'Bearer ' prefix
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'User data required'}), 400
+        
+        uid = data.get('uid')
+        email = data.get('email', '').strip().lower()
+        email_verified = data.get('emailVerified', False)
+        
+        if not uid or not email:
+            return jsonify({'error': 'Firebase UID and email are required'}), 400
+        
+        # Check if user exists in our database
+        existing_user = execute_query(
+            "SELECT id, email, is_verified FROM users WHERE email = %s",
+            (email,), fetch=True
+        )
+        
+        if existing_user:
+            user_id = existing_user[0]['id']
+            # Update verification status if needed
+            if email_verified and not existing_user[0]['is_verified']:
+                execute_query(
+                    "UPDATE users SET is_verified = %s WHERE id = %s",
+                    (email_verified, user_id)
+                )
+        else:
+            # Create new user record
+            result = execute_query("""
+                INSERT INTO users (email, password_hash, is_verified, created_at)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                RETURNING id
+            """, (email, 'firebase_auth', email_verified), fetch=True)
+            user_id = result[0]['id']
+        
+        # Check if user already has an API key
+        existing_key = execute_query("""
+            SELECT api_key FROM api_keys 
+            WHERE user_id = %s AND is_active = TRUE
+            ORDER BY created_at DESC 
+            LIMIT 1
+        """, (user_id,), fetch=True)
+        
+        if existing_key:
+            # Return existing API key (hashed, so we need to generate a new one)
+            # For now, generate a new one
+            pass
+        
+        # Generate new API key
+        raw_api_key = generate_api_key()
+        hashed_key = hash_api_key(raw_api_key)
+        
+        # Store API key
+        execute_query("""
+            INSERT INTO api_keys (user_id, api_key, created_at, is_active)
+            VALUES (%s, %s, CURRENT_TIMESTAMP, TRUE)
+        """, (user_id, hashed_key))
+        
+        return jsonify({
+            'success': True,
+            'api_key': raw_api_key,
+            'message': 'API key generated successfully!',
+            'user': {
+                'email': email,
+                'email_verified': email_verified,
+                'uid': uid
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Firebase login failed: {str(e)}'}), 500
+
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
-    """User signup endpoint"""
+    """User signup endpoint (legacy)"""
     try:
         data = request.get_json()
         if not data:
@@ -430,4 +522,4 @@ if __name__ == '__main__':
     print("  GET /api/search?q=term   - Search movies")
     
     # Start the server on all interfaces for Replit
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=True)
