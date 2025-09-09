@@ -1,0 +1,81 @@
+## PHASE 9 — Docs, Swagger & Try-it
+
+**Goal:** Provide interactive documentation that devs can use straight away.
+
+**Tasks**
+
+1. Maintain an OpenAPI JSON for endpoints (Workers serve a static JSON at `/openapi.json`).
+2. Host Swagger UI page on Pages that reads `/openapi.json`.
+3. Implement Try-It feature to automatically use logged-in user key (or allow manual key entry).
+
+**Expected outcome**
+
+- Docs show every endpoint, parameters, request/response examples and allow in-browser testing.
+
+**How to test / Acceptance**
+
+- Logged-in user uses Swagger Try-It and gets live responses.
+
+**Estimated time:** 2–4 days
+
+**Pitfalls**
+
+- Don’t allow anonymous Try-It to call protected endpoints without a key.
+
+---
+
+## PHASE 10 — Observability, backups & runbook
+
+**Goal:** Production hygiene: backups, alerts, health checks, and runbook.
+
+**Tasks**
+
+1. Create `/healthz` endpoint that checks D1 connectivity and returns schema version.
+2. Schedule daily export of `movies` and `usage_logs` to Cloudinary R2 or to GitHub (as CSV backup) via a scheduled Worker job.
+3. Add a lightweight monitoring worker that checks daily usage vs thresholds and emails admin if >80% of Workers or Brevo quotas.
+4. Create runbook docs: rotating secrets, restoring DB from backup, regenerating keys, emergency contact.
+
+**Expected outcome**
+
+- You can restore DB from a daily backup in case of accidental deletion.
+- You receive alert email before free-tier limits are reached.
+
+**How to test / Acceptance**
+
+- Trigger a backup job manually and verify the backup is created and restorable.
+- Trigger alert (simulate high usage) and verify admin receives email.
+
+**Estimated time:** 2–4 days
+
+**Pitfalls**
+
+- Backup frequency and retention — plan retention based on your needs; keep recent 7–30 days.
+
+---
+
+## PHASE 11 — Security hardening & launch checklist
+
+**Goal:** Ensure safe public launch.
+
+**Checklist (must pass)**
+
+- All secrets stored in Cloudflare secrets, not in repo.
+- Brevo verified sender email / domain.
+- Turnstile enabled for signup and import endpoints.
+- Passwords salted and hashed; JWT secret strong.
+- API keys shown raw only once and always stored hashed in DB.
+- Rate limits tested at scale in a staging environment.
+- Admin portal hidden behind role and not public.
+- CORS default  during dev, switch to whitelist on launch.
+- Health checks pass and backups operational.
+
+**Expected outcome**
+
+- System is safe to open to public; you have a rollback plan.
+
+**How to test / Acceptance**
+
+- Penetration checklist: attempt brute force OTP; ensure lockouts trigger.
+- Simulate heavy read loads (small scale) and watch rate limit & alerting.
+
+**Estimated time:** 2–4 days

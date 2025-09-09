@@ -15,7 +15,7 @@ from src.database import execute_query
 from src.auth import (
     create_user, verify_user_email, resend_verification, 
     validate_api_key, log_api_usage, AuthError, RateLimitError,
-    init_firebase
+    init_firebase, generate_api_key, hash_api_key
 )
 import json
 from functools import wraps

@@ -1,0 +1,71 @@
+## PHASE 5 — API key auth & rate-limiting enforcement
+
+**Goal:** Protect endpoints; require `X-API-KEY` header; track per-key usage and enforce daily/monthly quotas.
+
+**Design**
+
+- Store only a **hash** of raw API key (HMAC with API_HMAC_SECRET).
+- Per-key limits:
+    - **daily**: use daily_usage table + Cloudflare KV for fast increments (optional).
+    - **monthly**: sum daily_usage for current month against api_keys.monthly_limit (default 1000).
+- For each request:
+    - Validate key → check active status.
+    - Atomic increment daily counter → if over limit return 429 and `Retry-After`.
+    - Log to usage_logs.
+
+**Tasks**
+
+1. Implement auth middleware in Worker.
+2. Implement daily/monthly counters (prefer daily_usage upsert in D1; use KV only for high-performance short-term counters if needed).
+3. Implement endpoint `/api-key/stats` for users to view usage and plan.
+4. Add admin endpoints for resetting usage.
+
+**Expected outcome**
+
+- Only valid keys can access API.
+- Quotas enforced; exceeding returns 429 with clear JSON and Retry-After header.
+
+**How to test / Acceptance**
+
+- Create a test api_key (via DB insert or signup).
+- Make repeated requests to /movies until daily quota exceeded: expect 429 at the threshold.
+- `/api-key/stats` returns accurate counters and endpoint breakdown (derived from usage_logs).
+
+**Estimated time:** 6–12 hours
+
+**Pitfalls**
+
+- Race conditions on counters — use upsert or KV atomic increments.
+- Hashing scheme must be consistent (HMAC long-term secret).
+
+
+## PHASE 6 — Admin JSON endpoints & CSV upload API (no UI yet)
+
+**Goal:** Allow admin to manage CSV imports, keys and view logs through protected JSON endpoints.
+
+**Tasks**
+
+1. Secure admin endpoints (admin JWT).
+2. Admin endpoints:
+    - `POST /admin/import-csv` (file upload) → validate & import, return import report.
+    - `GET /admin/api-keys` → list keys + usage stats.
+    - `POST /admin/api-keys` → create keys manually (optional).
+    - `POST /admin/reset-usage` → reset daily/monthly counters for a key.
+    - `GET /admin/logs` → paginated usage_logs.
+3. Ensure importer validates columns and returns detailed error rows for admin review.
+
+**Expected outcome**
+
+- Admin can upload a CSV and see immediate changes in API responses.
+- Admin can view and manage API keys.
+
+**How to test / Acceptance**
+
+- Use admin JWT to upload CSV and check `/movies` returns imported rows.
+- Admin lists keys and usage logs; resets usage successfully.
+
+**Estimated time:** 6–10 hours
+
+**Pitfalls**
+
+- File size limits in Workers — ensure multipart streaming or limit sizes; for big imports admin can upload to R2 or the importer can run locally and call an import API with chunked uploads.

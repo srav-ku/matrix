@@ -1,0 +1,51 @@
+## PHASE 12 — Launch & operational playbook
+
+**Goal:** Go live on custom domain, monitor first 30 days, adjust quotas.
+
+**Tasks**
+
+1. Point a custom domain to Pages and Workers routes.
+2. Switch CORS to whitelist production domain.
+3. Publish landing pages and documentation.
+4. Monitor analytics: traffic, API calls, Brevo consumption.
+5. If approaching free limits, throttle heavy users and notify them about paid tiers.
+
+**Expected outcome**
+
+- Production site live; developers can sign up and use the API reliably.
+- Alerts configured to warn you about quota exhaustion.
+
+**How to test / Acceptance**
+
+- End-to-end sign up -> verify -> dashboard -> API calls workflow works on production domain.
+- Monitor first 7 days usage and error rates.
+
+**Estimated time:** 1–3 days
+
+---
+
+## PHASE 13 — Growth & paid plans (future)
+
+**Goal:** Prepare for monetization & scale when needed.
+
+**Considerations**
+
+- Add paid plans with Stripe/Paddle for quotas upgrades.
+- Move to external Postgres if D1 limits reached (Neon or Supabase).
+- Add external search (Meilisearch/Typesense) for better fuzzy search if needed.
+- Add caching (CF Worker cache or CDN) for heavily requested public endpoints.
+
+**Estimated time for basic paid support:** 2–3 weeks (business + integration work)
+
+Admin will have separate page with same ui of website and has his own credentials
+
+And the firebase authentication on login and sign up not working even after has account stored in firebase
+
+This should be a full stack api offering website that gives APIs to developers on sucessful sign up with verification they get api and with that api can access endpoints same like general APIs like imdb, tmdb etc. Admin should manage all things, everything in his control that he should upload, edit, delete any data if he want
+
+All stored in cloudflare, authentication done in firebase
+In website you should make all options like usecase product etc in nav bar remove or replace with the features website has
+
+Also after logged in the dashboard should show all working features (not prototype) but realtime working all options you give, available, if anything not there remove or add that feature
+
+Also tell how to setup this fully offline too

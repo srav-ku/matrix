@@ -1,0 +1,71 @@
+## PHASE 7 — Frontend (Developer dashboard) on Cloudflare Pages
+
+**Goal:** Provide devs a polished dashboard to register, verify, see API key, usage, and test endpoints.
+
+**Pages to build**
+
+- Landing page with CTA + code snippet
+- Signup / Verify pages
+- Login & Session management
+- Dashboard:
+    - Show API key (masked) with Show/Hide and Revoke & Regenerate (calls backend)
+    - Quota progress bar + numeric count
+    - Usage chart (last 7 days)
+    - API Playground to test `/movies` and `/search`
+
+**Tasks**
+
+1. Implement pages and client-side calls to Worker endpoints.
+2. Use JWT in HttpOnly cookie for session.
+3. Connect to Brevo flows for signup/verify.
+4. Display errors from API clearly.
+
+**Expected outcome**
+
+- A developer can fully sign up, verify via OTP, see API key, and call playground endpoints using their key.
+
+**How to test / Acceptance**
+
+- Complete signup → verify OTP → dashboard shows key.
+- Dashboard playground requests succeed using the user’s key.
+- Revoke/regenerate invalidates old key and issues new one.
+
+**Estimated time:** 8–16 days (UI design + auth flows + polishing)
+
+**Pitfalls**
+
+- CORS must be configured to allow Pages domain to Workers.
+- Sessions storage/cookies must be secure and same-site settings configured.
+
+## PHASE 8 — Admin UI (Cloudflare Pages)
+
+**Goal:** Friendly admin portal for CSV uploads, key management, logs and CORS whitelist.
+
+**Pages to build**
+
+- Admin login
+- Admin dashboard (KPIs: total users, active keys, calls today)
+- CSV import UI (file -> dry-run preview -> import)
+- API keys manager (search, suspend, reset quota)
+- Usage logs viewer with filters
+
+**Tasks**
+
+1. Implement admin UI components and wire them to admin JSON endpoints.
+2. Add role-based access control in frontend and backend (only admin users can access pages).
+3. Add CORS whitelist UI (update KV or DB entry applied by Worker middleware).
+
+**Expected outcome**
+
+- Admin can perform all management tasks through UI without CLI.
+
+**How to test / Acceptance**
+
+- Admin uploads CSV via UI; users see new movies immediately.
+- Admin suspends key; requests with suspended key return 401.
+
+**Estimated time:** 6–12 days
+
+**Pitfalls**
+
+- Ensure admin portals are not indexed or discoverable publicly.
