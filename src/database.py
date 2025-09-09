@@ -41,9 +41,29 @@ def execute_query(query, params=None, fetch=False):
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(query, params)
             if fetch:
-                return cursor.fetchall()
+                result = cursor.fetchall()
+                conn.commit()
+                return result
             conn.commit()
             return cursor.rowcount
+
+def execute_transaction(queries):
+    """Execute multiple queries in a single transaction"""
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                results = []
+                for query, params, fetch in queries:
+                    cursor.execute(query, params)
+                    if fetch:
+                        results.append(cursor.fetchall())
+                    else:
+                        results.append(cursor.rowcount)
+                conn.commit()
+                return results
+        except Exception as e:
+            conn.rollback()
+            raise e
 
 def create_schema():
     """Create all database tables for Phase 1"""

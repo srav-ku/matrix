@@ -1,0 +1,80 @@
+
+> movie-auth-frontend@1.0.0 dev
+ ⚠ Invalid next.config.js options detected: 
+ ⚠     Unrecognized key(s) in object: 'allowedDevOrigins' at "experimental"
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+   ▲ Next.js 15.5.2
+   - Local:        http://localhost:5000
+   - Network:      http://172.31.78.194:5000
+   - Experiments (use with caution):
+     · allowedDevOrigins
+
+ ✓ Starting...
+ ✓ Ready in 2.1s
+ ○ Compiling /auth ...
+ ✓ Compiled /auth in 13.6s (778 modules)
+ GET /auth 200 in 14135ms
+ ✓ Compiled in 747ms (266 modules)
+ GET /auth 200 in 143ms
+ GET /auth 200 in 19ms
+ GET /auth 200 in 18ms
+ GET /auth 200 in 47ms
+ GET /auth 200 in 229ms
+ ⚠ Cross origin request detected from 59fcc5ce-6235-49bc-9ac9-543ee860fe06-00-2ud0lcvcro22n.sisko.replit.dev to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+
+Console Error
+
+A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+See more info here: https://nextjs.org/docs/messages/react-hydration-error
+
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/dashboard" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <RootLayout>
+                        <html
+                          lang="en"
+-                         style={{--vsc-domain:"\"59fcc5ce..."}}
+                        >
+                  ...
+src/app/layout.tsx (18:5) @ RootLayout
+
+
+  16 | }) {
+  17 |   return (
+> 18 |     <html lang="en">
+     |     ^
+  19 |       <body className={inter.className}>
+  20 |         {children}
+  21 |       </body>
+Call Stack
+18
+
+Show 16 ignore-listed frame(s)
+html
+<anonymous>
+RootLayout
+src/app/layout.tsx (18:5)
+1
+2
