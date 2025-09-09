@@ -8,7 +8,7 @@ import {
   sendEmailVerification,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User
+  type User
 } from 'firebase/auth'
 
 // Firebase configuration (from user's provided config)
@@ -34,7 +34,8 @@ export {
   signInWithEmailAndPassword,
   signInWithPopup,
   sendEmailVerification,
-  signOut: firebaseSignOut,
-  onAuthStateChanged,
-  User
+  onAuthStateChanged
 }
+
+export { firebaseSignOut as signOut }
+export type { User }

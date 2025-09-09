@@ -4,7 +4,9 @@
 
 This is a complete movie database system with a modern, professional user interface. The project features a **fully responsive React-like UI** built with modern web technologies, matching the exact design specifications provided. The system includes comprehensive movie data management, user authentication, and a professional dashboard interface.
 
-## Project Status: ✅ FULLY COMPLETE
+## Project Status: ✅ RUNNING IN REPLIT
+
+The project has been successfully imported and configured to run in the Replit environment with both frontend and backend services operational.
 
 **Modern UI System:**
 - ✅ **Exact Design Implementation**: Pixel-perfect recreation of uploaded dashboard design
@@ -45,6 +47,14 @@ Preferred communication style: Simple, everyday language.
   - User management tables: `users`, `email_verifications`, `api_keys`
   - Usage tracking tables: `usage_logs`, `daily_usage`
 - **Data Relationships**: Many-to-many relationships for genres and cast members
+- **Simplified API**: `simple_api.py` provides core movie functionality without authentication complexity
+
+### Replit Environment Configuration
+- **Frontend Workflow**: Next.js dev server running on port 5000
+- **Backend Workflow**: Flask API server running on port 8000  
+- **Database**: Replit PostgreSQL instance with 50 imported movies
+- **Proxy Configuration**: Next.js configured to proxy API calls to backend
+- **Host Configuration**: Both servers configured to work with Replit's proxy environment
 
 ### Data Import System
 - **Architecture Pattern**: Idempotent import system with dry-run capability

@@ -13,17 +13,16 @@ export default function HomePage() {
           <div className="text-2xl font-bold text-green-400">The Matrix</div>
         </div>
         <nav className="hidden md:flex items-center space-x-8">
-          <Link href="#" className="text-gray-300 hover:text-white">Use cases</Link>
-          <Link href="#" className="text-gray-300 hover:text-white">Product</Link>
-          <Link href="#" className="text-gray-300 hover:text-white">Docs</Link>
-          <Link href="#" className="text-gray-300 hover:text-white">Pricing</Link>
-          <Link href="#" className="text-gray-300 hover:text-white">Resources</Link>
+          <Link href="#features" className="text-gray-300 hover:text-white">Features</Link>
+          <Link href="#api-docs" className="text-gray-300 hover:text-white">API Docs</Link>
+          <Link href="#pricing" className="text-gray-300 hover:text-white">Pricing</Link>
+          <Link href="#examples" className="text-gray-300 hover:text-white">Examples</Link>
           <div className="flex items-center space-x-4">
-            <button className="px-4 py-2 border border-gray-600 rounded-lg hover:border-gray-500 transition-colors">
-              Book a demo
-            </button>
+            <Link href="/auth" className="px-4 py-2 border border-gray-600 rounded-lg hover:border-gray-500 transition-colors">
+              Sign Up
+            </Link>
             <Link href="/auth" className="px-4 py-2 bg-green-500 text-black rounded-lg hover:bg-green-400 font-medium transition-colors">
-              Log in
+              Get API Key
             </Link>
           </div>
         </nav>
@@ -33,44 +32,46 @@ export default function HomePage() {
       <main className="flex flex-col items-center justify-center px-4 py-20">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-            Build seamless <span className="text-green-400">auth</span> experiences
+            Access movie data with <span className="text-green-400">powerful APIs</span>
           </h1>
           
           <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Use our API to build to improve your customer experience with 
-            effortless One Time Passcodes by allowing your users to access 
-            your websites or build loyalty in an instant.
+            Get instant access to comprehensive movie information, search capabilities, and rich metadata.
+            Built for developers who need reliable movie data for their applications.
           </p>
 
           <Link href="/auth" className="inline-flex items-center px-8 py-4 bg-green-500 text-black rounded-lg hover:bg-green-400 font-semibold text-lg mb-20 transition-colors">
-            Get Started
+            Get Your API Key
             <ArrowRight className="ml-2 w-5 h-5" />
           </Link>
 
-          {/* Demo Cards - Matching uploaded image exactly */}
+          {/* API Demo Cards */}
           <div className="flex flex-col lg:flex-row gap-8 mt-20">
-            {/* Messages Card */}
+            {/* API Request Card */}
             <div className="flex-1 bg-gray-900/80 backdrop-blur-sm border border-gray-700 rounded-2xl p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-2 text-sm text-gray-400">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                  <span>Messages</span>
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span>API Request</span>
                 </div>
-                <span className="text-xs text-gray-500">09:35:14</span>
+                <span className="text-xs text-gray-500">GET /api/movies</span>
               </div>
               
               <div className="text-left mb-8">
-                <p className="text-gray-300 mb-2">Your Passcode is</p>
-                <p className="text-4xl font-bold text-white">4695</p>
+                <p className="text-gray-300 mb-2">Request</p>
+                <div className="bg-black border border-gray-800 rounded-lg p-4 font-mono text-sm">
+                  <div className="text-blue-400">curl -H "X-API-Key: your_key" \</div>
+                  <div className="text-blue-400 ml-4">https://api.matrix.to/movies</div>
+                </div>
               </div>
 
               <div className="flex items-center justify-center w-12 h-12 bg-green-500/20 rounded-lg mb-4 mx-auto">
                 <Shield className="w-6 h-6 text-green-400" />
               </div>
-              <p className="text-sm text-gray-400 text-center">Enter Passcode</p>
+              <p className="text-sm text-gray-400 text-center">Secure API Access</p>
             </div>
 
-            {/* SMS OTP Card */}
+            {/* API Response Card */}
             <div className="flex-1 bg-gray-900/80 backdrop-blur-sm border border-gray-700 rounded-2xl p-8 relative">
               <div className="flex justify-center mb-4">
                 <div className="flex space-x-1">
@@ -84,17 +85,20 @@ export default function HomePage() {
                 <Smartphone className="w-8 h-8 text-green-400" />
               </div>
               
-              <h3 className="text-2xl font-semibold mb-6 text-center text-white">SMS OTP</h3>
-              <span className="text-xs text-gray-500 absolute top-4 right-4">09:35:14</span>
+              <h3 className="text-2xl font-semibold mb-6 text-center text-white">JSON Response</h3>
+              <span className="text-xs text-gray-500 absolute top-4 right-4">200 OK</span>
               
-              <div className="grid grid-cols-6 gap-2 mb-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="aspect-square border border-gray-600 rounded-lg hover:border-green-500 transition-colors"></div>
-                ))}
+              <div className="bg-black border border-gray-800 rounded-lg p-4 font-mono text-xs mb-6">
+                <div className="text-yellow-300">{'{'}</div>
+                <div className="text-blue-400 ml-2">&quot;title&quot;: &quot;The Matrix&quot;,</div>
+                <div className="text-blue-400 ml-2">&quot;year&quot;: 1999,</div>
+                <div className="text-blue-400 ml-2">&quot;director&quot;: &quot;Wachowski&quot;,</div>
+                <div className="text-blue-400 ml-2">&quot;rating&quot;: 8.7</div>
+                <div className="text-yellow-300">{'}'}</div>
               </div>
               
               <button className="w-full py-3 bg-green-500 text-black rounded-lg hover:bg-green-400 font-medium transition-colors">
-                Verify OTP
+                Try API
               </button>
             </div>
           </div>
@@ -126,14 +130,14 @@ export default function HomePage() {
                   <div className="text-blue-400">curl --request POST \\</div>
                   <div className="text-blue-400 ml-4">--url https://api.matrix.to/send/otp \\</div>
                   <div className="text-blue-400 ml-4">--header 'Content-Type: application/json' \\</div>
-                  <div className="text-blue-400 ml-4">--data '{</div>
-                  <div className="text-yellow-300 ml-8">"client_id": "matrix_client_id",</div>
-                  <div className="text-yellow-300 ml-8">"client_secret": "matrix_client_secret",</div>
-                  <div className="text-yellow-300 ml-8">"digits": "6",</div>
-                  <div className="text-yellow-300 ml-8">"channel": "sms",</div>
-                  <div className="text-yellow-300 ml-8">"target": "+1 234 567 8900",</div>
-                  <div className="text-yellow-300 ml-8">"template": "Your code is {{code}}"</div>
-                  <div className="text-blue-400 ml-4">}'</div>
+                  <div className="text-blue-400 ml-4">--data '{'{'}</div>
+                  <div className="text-yellow-300 ml-8">&quot;client_id&quot;: &quot;matrix_client_id&quot;,</div>
+                  <div className="text-yellow-300 ml-8">&quot;client_secret&quot;: &quot;matrix_client_secret&quot;,</div>
+                  <div className="text-yellow-300 ml-8">&quot;digits&quot;: &quot;6&quot;,</div>
+                  <div className="text-yellow-300 ml-8">&quot;channel&quot;: &quot;sms&quot;,</div>
+                  <div className="text-yellow-300 ml-8">&quot;target&quot;: &quot;+1 234 567 8900&quot;,</div>
+                  <div className="text-yellow-300 ml-8">&quot;template&quot;: &quot;Your code is code&quot;</div>
+                  <div className="text-blue-400 ml-4">{'}'}'</div>
                 </div>
               </div>
             </div>

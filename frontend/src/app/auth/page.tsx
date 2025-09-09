@@ -45,40 +45,63 @@ export default function AuthPage() {
     }
 
     try {
-      // Call backend API
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup'
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          name: formData.name
-        })
-      })
-
-      const result = await response.json()
+      // Import Firebase auth functions
+      const { auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } = await import('@/lib/firebase')
       
-      if (response.ok) {
-        if (isLogin) {
-          showNotification('success', 'Login successful! Redirecting to dashboard...')
-          setTimeout(() => {
-            window.location.href = '/dashboard'
-          }, 2000)
-        } else {
-          showNotification('success', 'Account created successfully! Please check your email for verification.')
-          setTimeout(() => {
-            setIsLogin(true)
-            setFormData({ email: formData.email, password: '', name: '', confirmPassword: '' })
-          }, 2000)
+      if (isLogin) {
+        // Sign in with Firebase
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
+        const user = userCredential.user
+        
+        // Check if email is verified
+        if (!user.emailVerified) {
+          showNotification('error', 'Please verify your email address before logging in.')
+          setIsLoading(false)
+          return
         }
+        
+        // Store user session
+        localStorage.setItem('user', JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          emailVerified: user.emailVerified
+        }))
+        
+        showNotification('success', 'Login successful! Redirecting to dashboard...')
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 2000)
       } else {
-        showNotification('error', result.error || 'Authentication failed. Please try again.')
+        // Create account with Firebase
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password)
+        const user = userCredential.user
+        
+        // Send email verification
+        await sendEmailVerification(user)
+        
+        showNotification('success', 'Account created successfully! Please check your email for verification.')
+        setTimeout(() => {
+          setIsLogin(true)
+          setFormData({ email: formData.email, password: '', name: '', confirmPassword: '' })
+        }, 2000)
       }
-    } catch (error) {
-      showNotification('error', 'Authentication failed. Please try again.')
+    } catch (error: any) {
+      let errorMessage = 'Authentication failed. Please try again.'
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.'
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.'
+      } else if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists.'
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password.'
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address format.'
+      }
+      
+      showNotification('error', errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -89,7 +112,28 @@ export default function AuthPage() {
   }
 
   const handleGoogleAuth = async () => {
-    showNotification('info', 'Google authentication coming soon!')
+    setIsLoading(true)
+    try {
+      const { auth, googleProvider, signInWithPopup } = await import('@/lib/firebase')
+      const result = await signInWithPopup(auth, googleProvider)
+      const user = result.user
+      
+      // Store user session
+      localStorage.setItem('user', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified
+      }))
+      
+      showNotification('success', 'Google sign-in successful! Redirecting to dashboard...')
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 2000)
+    } catch (error: any) {
+      showNotification('error', 'Google sign-in failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
