@@ -315,39 +315,15 @@ export default function Dashboard() {
         {/* Dashboard Content */}
         <main className="flex-1 overflow-y-auto p-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Total Requests</p>
-                  <p className="text-3xl font-bold text-white">{stats.total_requests.toLocaleString()}</p>
-                </div>
-                <div className="w-12 h-12 bg-green-900/50 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-green-400" />
-                </div>
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-400 text-sm">API Keys</p>
-                  <p className="text-3xl font-bold text-white">{stats.api_key_count}</p>
+                  <p className="text-3xl font-bold text-white">{apiKeys.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-900/50 rounded-lg flex items-center justify-center">
                   <Key className="w-6 h-6 text-blue-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">This Month</p>
-                  <p className="text-3xl font-bold text-white">{stats.this_month_requests.toLocaleString()}</p>
-                </div>
-                <div className="w-12 h-12 bg-purple-900/50 rounded-lg flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-purple-400" />
                 </div>
               </div>
             </div>
@@ -365,56 +341,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Usage Chart */}
-          <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6 mb-8">
-            <h3 className="text-xl font-semibold text-white mb-6">API Usage (Last 24 Hours)</h3>
-            <div className="h-48">
-              <svg width="100%" height="100%" viewBox="0 0 400 160" className="text-green-400">
-                <defs>
-                  <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="currentColor" stopOpacity="0.3"/>
-                    <stop offset="100%" stopColor="currentColor" stopOpacity="0"/>
-                  </linearGradient>
-                </defs>
-                
-                {/* Grid lines */}
-                {[0, 1, 2, 3, 4].map(i => (
-                  <line key={i} x1="0" y1={i * 40} x2="400" y2={i * 40} stroke="#374151" strokeWidth="1" strokeOpacity="0.3"/>
-                ))}
-                
-                {/* Chart area */}
-                {stats.chart_data.length > 0 && (
-                  <>
-                    <polygon
-                      points={`0,160 ${generateChartPoints()} 400,160`}
-                      fill="url(#areaGradient)"
-                    />
-                    <polyline
-                      points={generateChartPoints()}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                  </>
-                )}
-                
-                {/* Data points */}
-                {stats.chart_data.map((point, index) => {
-                  const x = (index / 23) * 380 + 10
-                  const y = 160 - (point.requests / Math.max(...stats.chart_data.map(d => d.requests), 1)) * 140
-                  return (
-                    <circle
-                      key={index}
-                      cx={x}
-                      cy={y}
-                      r="3"
-                      fill="currentColor"
-                    />
-                  )
-                })}
-              </svg>
-            </div>
-          </div>
 
           {/* API Keys Section */}
           <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-6">
