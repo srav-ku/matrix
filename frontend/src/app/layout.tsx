@@ -5,8 +5,13 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ezId - Movie Database Auth',
-  description: 'Build seamless auth experiences with our Movie Database API',
+  title: 'The Matrix - Movie Database API',
+  description: 'Access comprehensive movie data with The Matrix API platform',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({

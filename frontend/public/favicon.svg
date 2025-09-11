@@ -1,0 +1,27 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="6" fill="#000000"/>
+  <rect x="2" y="2" width="28" height="28" rx="4" fill="#0a0a0a" stroke="#00ff41" stroke-width="0.5"/>
+  
+  <!-- Matrix-style digital rain effect -->
+  <rect x="6" y="4" width="1" height="2" fill="#00ff41" opacity="0.8"/>
+  <rect x="6" y="7" width="1" height="1" fill="#00ff41" opacity="0.6"/>
+  <rect x="6" y="9" width="1" height="3" fill="#00ff41" opacity="0.4"/>
+  
+  <rect x="10" y="6" width="1" height="4" fill="#00ff41" opacity="0.9"/>
+  <rect x="10" y="11" width="1" height="2" fill="#00ff41" opacity="0.5"/>
+  
+  <rect x="14" y="3" width="1" height="3" fill="#00ff41" opacity="0.7"/>
+  <rect x="14" y="8" width="1" height="4" fill="#00ff41" opacity="0.8"/>
+  
+  <rect x="18" y="5" width="1" height="2" fill="#00ff41" opacity="0.6"/>
+  <rect x="18" y="9" width="1" height="5" fill="#00ff41" opacity="0.9"/>
+  
+  <rect x="22" y="4" width="1" height="6" fill="#00ff41" opacity="0.8"/>
+  <rect x="22" y="12" width="1" height="2" fill="#00ff41" opacity="0.4"/>
+  
+  <rect x="26" y="6" width="1" height="3" fill="#00ff41" opacity="0.7"/>
+  <rect x="26" y="11" width="1" height="4" fill="#00ff41" opacity="0.6"/>
+  
+  <!-- Central 'M' for Matrix -->
+  <path d="M12 18L12 28L14 28L14 22L16 28L18 28L18 22L20 28L22 28L22 18L20 18L20 24L18 20L16 20L16 24L14 18L12 18Z" fill="#00ff41"/>
+</svg>
