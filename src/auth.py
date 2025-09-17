@@ -17,6 +17,67 @@ from src.database import execute_query
 import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
 
+def validate_firebase_admin(firebase_token: str, admin_uid: str = "MF2LvHPFaWhWSoevxm4ZyLcZzme2") -> bool:
+    """Validate Firebase admin token for specific admin UID"""
+    try:
+        if not firebase_app:
+            print("Firebase not initialized")
+            return False
+            
+        # Verify the ID token
+        decoded_token = firebase_auth.verify_id_token(firebase_token)
+        user_uid = decoded_token['uid']
+        
+        # Check if this is the specific admin UID
+        if user_uid != admin_uid:
+            print(f"User {user_uid} is not admin {admin_uid}")
+            return False
+            
+        # Update or create admin user in database
+        admin_email = decoded_token.get('email', 'admin@moviedb.com')
+        
+        execute_query("""
+            INSERT INTO users (email, password_hash, is_verified, firebase_uid, role) 
+            VALUES (%s, 'firebase_auth', true, %s, 'admin')
+            ON CONFLICT (firebase_uid) DO UPDATE SET
+                email = EXCLUDED.email,
+                role = 'admin'
+        """, (admin_email, user_uid))
+        
+        return True
+        
+    except Exception as e:
+        print(f"Firebase admin validation error: {e}")
+        return False
+        
+def sync_firebase_user(firebase_token: str) -> Optional[Dict]:
+    """Sync Firebase user to local database"""
+    try:
+        if not firebase_app:
+            return None
+            
+        decoded_token = firebase_auth.verify_id_token(firebase_token)
+        user_uid = decoded_token['uid']
+        email = decoded_token.get('email')
+        
+        if not email:
+            return None
+            
+        # Insert or update user
+        result = execute_query("""
+            INSERT INTO users (email, password_hash, is_verified, firebase_uid, role) 
+            VALUES (%s, 'firebase_auth', true, %s, 'user')
+            ON CONFLICT (firebase_uid) DO UPDATE SET
+                email = EXCLUDED.email
+            RETURNING id, email, firebase_uid, role
+        """, (email, user_uid), fetch=True)
+        
+        return result[0] if result else None
+        
+    except Exception as e:
+        print(f"Firebase user sync error: {e}")
+        return None
+
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
@@ -401,6 +462,145 @@ def validate_api_key(api_key: str) -> Optional[Dict]:
     except Exception as e:
         return None
 
+def get_user_subscription(user_id: int) -> Dict:
+    """Get user's subscription plan and daily limit"""
+    try:
+        result = execute_query("""
+            SELECT plan_type, daily_limit
+            FROM user_subscriptions
+            WHERE user_id = %s
+        """, (user_id,), fetch=True)
+        
+        if result:
+            return {
+                'plan_type': result[0]['plan_type'],
+                'daily_limit': result[0]['daily_limit']
+            }
+        else:
+            # Create default free subscription if not exists
+            execute_query("""
+                INSERT INTO user_subscriptions (user_id, plan_type, daily_limit)
+                VALUES (%s, 'free', 100)
+            """, (user_id,))
+            return {'plan_type': 'free', 'daily_limit': 100}
+    except Exception as e:
+        print(f"Error getting user subscription: {e}")
+        return {'plan_type': 'free', 'daily_limit': 100}
+
+def get_user_daily_usage(user_id: int) -> int:
+    """Get user's total daily usage across all API keys"""
+    try:
+        today = datetime.now().date()
+        result = execute_query("""
+            SELECT COALESCE(SUM(du.request_count), 0) as total_requests
+            FROM daily_usage du
+            JOIN api_keys ak ON du.api_key_id = ak.id
+            WHERE ak.user_id = %s AND du.date = %s
+        """, (user_id, today), fetch=True)
+        
+        return result[0]['total_requests'] if result else 0
+    except Exception as e:
+        print(f"Error getting user daily usage: {e}")
+        return 0
+
+def check_user_rate_limit(user_id: int) -> bool:
+    """Check if user has exceeded their daily rate limit"""
+    try:
+        subscription = get_user_subscription(user_id)
+        current_usage = get_user_daily_usage(user_id)
+        
+        if current_usage >= subscription['daily_limit']:
+            plan_name = "free plan" if subscription['plan_type'] == 'free' else "premium plan"
+            raise RateLimitError(f"Your {plan_name} has reached its daily limit of {subscription['daily_limit']} requests. Please upgrade to premium for higher limits or try again tomorrow.")
+        
+        return True
+    except RateLimitError:
+        raise
+    except Exception as e:
+        print(f"Error checking rate limit: {e}")
+        # Fail-closed: Raise error if rate limit check fails
+        raise RateLimitError("Rate limit service temporarily unavailable. Please try again later.")
+
+def check_and_increment_user_rate_limit(user_id: int, api_key_id: int, endpoint: str) -> bool:
+    """Atomically check rate limit and increment usage counter"""
+    from datetime import datetime
+    
+    try:
+        today = datetime.now().date()
+        
+        # Atomic operation: check current usage and increment in single transaction
+        result = execute_query("""
+            WITH current_usage AS (
+                SELECT COALESCE(SUM(du.request_count), 0) as total_requests
+                FROM daily_usage du
+                JOIN api_keys ak ON du.api_key_id = ak.id
+                WHERE ak.user_id = %s AND du.date = %s
+            ),
+            user_plan AS (
+                SELECT COALESCE(us.daily_limit, 100) as daily_limit,
+                       COALESCE(us.plan_type, 'free') as plan_type
+                FROM user_subscriptions us
+                WHERE us.user_id = %s
+                UNION ALL
+                SELECT 100 as daily_limit, 'free' as plan_type
+                WHERE NOT EXISTS (SELECT 1 FROM user_subscriptions WHERE user_id = %s)
+                LIMIT 1
+            )
+            SELECT cu.total_requests, up.daily_limit, up.plan_type
+            FROM current_usage cu, user_plan up
+        """, (user_id, today, user_id, user_id), fetch=True)
+        
+        if not result:
+            raise Exception("Failed to get rate limit data")
+        
+        current_usage = result[0]['total_requests']
+        daily_limit = result[0]['daily_limit']
+        plan_type = result[0]['plan_type']
+        
+        # Check if limit would be exceeded
+        if current_usage >= daily_limit:
+            plan_name = "free plan" if plan_type == 'free' else "premium plan"
+            raise RateLimitError(f"Your {plan_name} has reached its daily limit of {daily_limit} requests. Please upgrade to premium for higher limits or try again tomorrow.")
+        
+        # Atomically increment usage counter
+        execute_query("""
+            INSERT INTO usage_logs (api_key_id, endpoint, timestamp, status_code)
+            VALUES (%s, %s, CURRENT_TIMESTAMP, 200)
+        """, (api_key_id, endpoint))
+        
+        execute_query("""
+            INSERT INTO daily_usage (api_key_id, date, request_count)
+            VALUES (%s, %s, 1)
+            ON CONFLICT (api_key_id, date)
+            DO UPDATE SET request_count = daily_usage.request_count + 1
+        """, (api_key_id, today))
+        
+        return True
+        
+    except RateLimitError:
+        raise
+    except Exception as e:
+        print(f"Error in atomic rate limit check: {e}")
+        # Fail-closed: Raise error if atomic operation fails
+        raise RateLimitError("Rate limit service temporarily unavailable. Please try again later.")
+
+def upgrade_user_to_premium(user_id: int):
+    """Upgrade user to premium plan"""
+    try:
+        execute_query("""
+            INSERT INTO user_subscriptions (user_id, plan_type, daily_limit, updated_at)
+            VALUES (%s, 'premium', 500, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id)
+            DO UPDATE SET 
+                plan_type = 'premium',
+                daily_limit = 500,
+                updated_at = CURRENT_TIMESTAMP
+        """, (user_id,))
+        print(f"✅ User {user_id} upgraded to premium")
+    except Exception as e:
+        print(f"Error upgrading user to premium: {e}")
+        raise
+
 def log_api_usage(api_key_id: int, endpoint: str, status_code: int):
     """Log API usage for analytics"""
     try:
@@ -421,3 +621,27 @@ def log_api_usage(api_key_id: int, endpoint: str, status_code: int):
     except Exception as e:
         # Don't fail the request if logging fails
         print(f"Failed to log API usage: {e}")
+
+def get_user_usage_stats(user_id: int) -> Dict:
+    """Get user's current usage stats"""
+    try:
+        subscription = get_user_subscription(user_id)
+        daily_usage = get_user_daily_usage(user_id)
+        remaining = max(0, subscription['daily_limit'] - daily_usage)
+        
+        return {
+            'plan_type': subscription['plan_type'],
+            'daily_limit': subscription['daily_limit'],
+            'daily_usage': daily_usage,
+            'remaining_requests': remaining,
+            'percentage_used': round((daily_usage / subscription['daily_limit']) * 100, 1)
+        }
+    except Exception as e:
+        print(f"Error getting usage stats: {e}")
+        return {
+            'plan_type': 'free',
+            'daily_limit': 100,
+            'daily_usage': 0,
+            'remaining_requests': 100,
+            'percentage_used': 0.0
+        }

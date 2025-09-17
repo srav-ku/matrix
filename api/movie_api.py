@@ -15,7 +15,8 @@ from src.database import execute_query
 from src.auth import (
     create_user, verify_user_email, resend_verification, 
     validate_api_key, log_api_usage, AuthError, RateLimitError,
-    init_firebase, generate_api_key, hash_api_key
+    init_firebase, generate_api_key, hash_api_key, 
+    check_user_rate_limit, get_user_usage_stats, upgrade_user_to_premium
 )
 import json
 from functools import wraps
@@ -48,6 +49,15 @@ def require_api_key(f):
         user_info = validate_api_key(api_key)
         if not user_info:
             return jsonify({'error': 'Invalid API key'}), 401
+        
+        # Check user rate limit before processing request
+        try:
+            from src.auth import check_user_rate_limit
+            check_user_rate_limit(user_info['user_id'])
+        except RateLimitError as e:
+            return jsonify({'error': str(e)}), 429
+        except:
+            pass  # Don't fail request if rate limiting check fails
         
         # Log API usage
         try:
@@ -499,6 +509,32 @@ def get_user_usage():
             'daily_usage': [dict(row) for row in daily_usage]
         })
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user/quota', methods=['GET'])
+@require_api_key
+def get_user_quota():
+    """Get user's current quota and usage stats"""
+    try:
+        user_id = request.user_info['user_id']
+        stats = get_user_usage_stats(user_id)
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user/upgrade', methods=['POST'])
+@require_api_key
+def upgrade_to_premium():
+    """Upgrade user to premium plan"""
+    try:
+        user_id = request.user_info['user_id']
+        upgrade_user_to_premium(user_id)
+        return jsonify({
+            'success': True,
+            'message': 'Successfully upgraded to premium plan!',
+            'new_daily_limit': 500
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

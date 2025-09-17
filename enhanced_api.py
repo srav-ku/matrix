@@ -13,6 +13,10 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from src.database import execute_query
 from src.auth_api import AuthManager
+from src.auth import (
+    check_user_rate_limit, check_and_increment_user_rate_limit, get_user_usage_stats, 
+    upgrade_user_to_premium, RateLimitError, validate_firebase_admin, init_firebase
+)
 
 app = Flask(__name__)
 
@@ -23,8 +27,180 @@ CORS(app, origins="*")
 app.config['DEBUG'] = True
 app.config['SERVER_NAME'] = None
 
+def require_firebase_admin(f):
+    """Decorator to require Firebase admin authentication for admin endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Initialize Firebase if not already done
+        init_firebase()
+        
+        # Get Firebase token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({
+                'error': 'Firebase admin authentication required', 
+                'message': 'Include Firebase ID token in Authorization header as Bearer token'
+            }), 401
+        
+        firebase_token = auth_header.split('Bearer ')[1]
+        
+        # Validate Firebase admin token for specific admin UID
+        admin_uid = "MF2LvHPFaWhWSoevxm4ZyLcZzme2"
+        if not validate_firebase_admin(firebase_token, admin_uid):
+            return jsonify({
+                'error': 'Admin access denied', 
+                'message': 'Only specific admin user can access these endpoints'
+            }), 403
+        
+        # Add admin info to request
+        request.admin_info = {
+            'firebase_uid': admin_uid,
+            'role': 'admin',
+            'email': 'admin@moviedb.com'
+        }
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Admin endpoints (protected by Firebase authentication)
+@app.route('/admin/movies', methods=['GET'])
+@require_firebase_admin
+def admin_list_movies():
+    """Admin endpoint to list all movies with pagination"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 20, type=int)
+        offset = (page - 1) * limit
+        
+        # Get total count
+        count_result = execute_query("SELECT COUNT(*) as total FROM movies", fetch=True)
+        total = count_result[0]['total'] if count_result else 0
+        
+        # Get movies with pagination
+        movies = execute_query("""
+            SELECT m.*, 
+                   STRING_AGG(DISTINCT mg.genre, ', ') as genres,
+                   STRING_AGG(DISTINCT CONCAT(c.actor_name, ' as ', c.role), '; ') as cast
+            FROM movies m
+            LEFT JOIN movie_genres mg ON m.id = mg.movie_id  
+            LEFT JOIN movie_cast c ON m.id = c.movie_id
+            GROUP BY m.id
+            ORDER BY m.year DESC, m.title
+            LIMIT %s OFFSET %s
+        """, (limit, offset), fetch=True)
+        
+        pages = (total + limit - 1) // limit
+        
+        return jsonify({
+            'movies': movies or [],
+            'pagination': {
+                'page': page,
+                'limit': limit,
+                'total': total,
+                'pages': pages
+            },
+            'admin': True
+        })
+    except Exception as e:
+        return jsonify({'error': f'Admin movies list failed: {str(e)}'}), 500
+
+@app.route('/admin/movies/upload-csv', methods=['POST'])
+@require_firebase_admin
+def admin_upload_csv():
+    """Admin endpoint to upload CSV file and update database"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No CSV file provided'}), 400
+        
+        file = request.files['file']
+        if not file or file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not file.filename.lower().endswith('.csv'):
+            return jsonify({'error': 'File must be CSV format'}), 400
+        
+        # Read CSV content
+        import csv
+        import io
+        
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.DictReader(stream)
+        
+        movies_added = 0
+        movies_updated = 0
+        errors = []
+        
+        for row_num, row in enumerate(csv_input, start=2):
+            try:
+                # Validate required fields
+                required_fields = ['title', 'year', 'genre', 'runtime']
+                missing_fields = [field for field in required_fields if not row.get(field)]
+                
+                if missing_fields:
+                    errors.append(f"Row {row_num}: Missing fields: {', '.join(missing_fields)}")
+                    continue
+                
+                # Insert or update movie
+                movie_result = execute_query("""
+                    INSERT INTO movies (title, year, runtime, rating, poster_url, director, plot, external_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (title, year) DO UPDATE SET
+                        runtime = EXCLUDED.runtime,
+                        rating = EXCLUDED.rating,
+                        poster_url = EXCLUDED.poster_url,
+                        director = EXCLUDED.director,
+                        plot = EXCLUDED.plot,
+                        external_id = EXCLUDED.external_id
+                    RETURNING id, title, (xmax = 0) as inserted
+                """, (
+                    row.get('title', '').strip(),
+                    int(row.get('year', 0)),
+                    int(row.get('runtime', 0)),
+                    float(row.get('rating', 0)) if row.get('rating') else None,
+                    row.get('poster_url', '').strip(),
+                    row.get('director', '').strip(),
+                    row.get('plot', '').strip(),
+                    row.get('external_id', '').strip() or None
+                ), fetch=True)
+                
+                if movie_result:
+                    movie_id = movie_result[0]['id']
+                    
+                    # Process and insert genres
+                    genres_text = row.get('genre', '').strip()
+                    if genres_text:
+                        # Clear existing genres for this movie (in case of update)
+                        execute_query("DELETE FROM movie_genres WHERE movie_id = %s", (movie_id,))
+                        
+                        # Handle comma-separated genres
+                        genres = [g.strip() for g in genres_text.split(',') if g.strip()]
+                        for genre in genres:
+                            execute_query(
+                                "INSERT INTO movie_genres (movie_id, genre) VALUES (%s, %s)",
+                                (movie_id, genre)
+                            )
+                    
+                    if movie_result[0]['inserted']:
+                        movies_added += 1
+                    else:
+                        movies_updated += 1
+                        
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'movies_added': movies_added,
+            'movies_updated': movies_updated,
+            'errors': errors[:10],  # Limit errors to first 10
+            'total_errors': len(errors)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'CSV upload failed: {str(e)}'}), 500
+
 def require_api_key(f):
-    """Decorator to require API key for endpoints"""
+    """Decorator to require API key for endpoints with rate limiting"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         api_key = request.headers.get('X-API-Key')
@@ -35,13 +211,142 @@ def require_api_key(f):
         if not user_info:
             return jsonify({'error': 'Invalid API key'}), 401
         
-        # Log usage
-        AuthManager.log_api_usage(user_info['api_key_id'], request.endpoint, 200)
+        # Atomically check rate limit and increment usage
+        try:
+            check_and_increment_user_rate_limit(
+                user_info['user_id'], 
+                user_info['api_key_id'], 
+                request.endpoint or 'unknown'
+            )
+        except RateLimitError as e:
+            return jsonify({'error': str(e)}), 429
+        except Exception as e:
+            # Fail-closed: Return 503 if rate limiting service fails
+            print(f"Rate limiting service error: {e}")
+            return jsonify({
+                'error': 'Rate limiting service temporarily unavailable',
+                'message': 'Please try again later',
+                'status': 'service_unavailable'
+            }), 503
         
         # Add user info to request
         request.user_info = user_info
+        
+        # Execute the endpoint function
+        result = f(*args, **kwargs)
+        
+        # Get current usage stats
+        usage_stats = get_user_usage_stats(user_info['user_id'])
+        
+        # Handle different response types
+        if isinstance(result, tuple) and len(result) == 2:
+            response_data, status_code = result
+        else:
+            response_data = result
+            status_code = 200
+        
+        # Extract JSON data from Flask Response objects
+        response_json = None
+        if hasattr(response_data, 'get_json'):
+            # It's a Flask Response object
+            response_json = response_data.get_json()
+        elif isinstance(response_data, dict):
+            # It's already a dict
+            response_json = response_data.copy()
+        
+        # Add meta information if we have JSON data
+        if response_json is not None:
+            response_json['meta'] = {
+                'user_email': user_info['email'],
+                'plan': usage_stats.get('plan_type', 'free'),
+                'usage': {
+                    'used': usage_stats.get('daily_usage', 0),
+                    'limit': usage_stats.get('daily_limit', 100),
+                    'remaining': usage_stats.get('remaining_requests', 0)
+                }
+            }
+            # Return new jsonify response with enhanced data
+            return jsonify(response_json) if status_code == 200 else (jsonify(response_json), status_code)
+        
+        # Return original response if we can't enhance it
+        return response_data if status_code == 200 else (response_data, status_code)
+    return decorated_function
+
+def require_api_key_no_limits(f):
+    """Decorator for management endpoints that require API key but exempt from rate limiting"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key')
+        if not api_key:
+            return jsonify({'error': 'API key required', 'message': 'Include X-API-Key header'}), 401
+        
+        user_info = AuthManager.validate_api_key(api_key)
+        if not user_info:
+            return jsonify({'error': 'Invalid API key'}), 401
+        
+        # Add user info to request (no rate limiting or usage logging)
+        request.user_info = user_info
         return f(*args, **kwargs)
     return decorated_function
+
+@app.route('/admin/movies/<int:movie_id>', methods=['GET', 'PUT', 'DELETE'])
+@require_firebase_admin
+def admin_movie_detail(movie_id):
+    """Admin endpoint for single movie CRUD operations"""
+    if request.method == 'GET':
+        try:
+            movie = execute_query("""
+                SELECT m.*, 
+                       STRING_AGG(DISTINCT mg.genre, ', ') as genres,
+                       STRING_AGG(DISTINCT CONCAT(c.actor_name, ' as ', c.role), '; ') as cast
+                FROM movies m
+                LEFT JOIN movie_genres mg ON m.id = mg.movie_id  
+                LEFT JOIN movie_cast c ON m.id = c.movie_id
+                WHERE m.id = %s
+                GROUP BY m.id
+            """, (movie_id,), fetch=True)
+            
+            if not movie:
+                return jsonify({'error': 'Movie not found'}), 404
+            
+            return jsonify({'movie': movie[0]})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'PUT':
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            # Update movie
+            execute_query("""
+                UPDATE movies SET 
+                    title = %s, year = %s, runtime = %s, rating = %s,
+                    poster_url = %s, director = %s, plot = %s, external_id = %s
+                WHERE id = %s
+            """, (
+                data.get('title'),
+                data.get('year'),
+                data.get('runtime'),
+                data.get('rating'),
+                data.get('poster_url'),
+                data.get('director'),
+                data.get('plot'),
+                data.get('external_id'),
+                movie_id
+            ))
+            
+            return jsonify({'success': True, 'message': 'Movie updated successfully'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'DELETE':
+        try:
+            execute_query("DELETE FROM movies WHERE id = %s", (movie_id,))
+            return jsonify({'success': True, 'message': 'Movie deleted successfully'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
 @app.route('/')
 def home():
@@ -376,6 +681,32 @@ def search_movies():
             'user': request.user_info['email']
         })
     
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user/quota', methods=['GET'])
+@require_api_key_no_limits
+def get_user_quota():
+    """Get user's current quota and usage stats"""
+    try:
+        user_id = request.user_info['user_id']
+        stats = get_user_usage_stats(user_id)
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user/upgrade', methods=['POST'])
+@require_api_key_no_limits
+def upgrade_to_premium():
+    """Upgrade user to premium plan"""
+    try:
+        user_id = request.user_info['user_id']
+        upgrade_user_to_premium(user_id)
+        return jsonify({
+            'success': True,
+            'message': 'Successfully upgraded to premium plan!',
+            'new_daily_limit': 500
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

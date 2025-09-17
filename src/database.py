@@ -70,6 +70,8 @@ def create_schema():
     
     # Drop tables if they exist (for clean setup)
     drop_tables_sql = """
+    DROP TABLE IF EXISTS rate_limits CASCADE;
+    DROP TABLE IF EXISTS user_subscriptions CASCADE;
     DROP TABLE IF EXISTS daily_usage CASCADE;
     DROP TABLE IF EXISTS usage_logs CASCADE;
     DROP TABLE IF EXISTS api_keys CASCADE;
@@ -157,6 +159,24 @@ def create_schema():
         request_count INTEGER DEFAULT 0,
         UNIQUE(api_key_id, date)
     );
+
+    -- User subscriptions table for plan management
+    CREATE TABLE user_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+        plan_type VARCHAR(20) DEFAULT 'free' CHECK (plan_type IN ('free', 'premium')),
+        daily_limit INTEGER DEFAULT 100,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Rate limiting table for general rate limiting
+    CREATE TABLE rate_limits (
+        id SERIAL PRIMARY KEY,
+        identifier VARCHAR(255) NOT NULL,
+        action VARCHAR(100) NOT NULL,
+        timestamp INTEGER NOT NULL
+    );
     
     -- Create indexes for performance
     CREATE INDEX idx_movies_year ON movies(year);
@@ -165,6 +185,9 @@ def create_schema():
     CREATE INDEX idx_movie_cast_movie_id ON movie_cast(movie_id);
     CREATE INDEX idx_usage_logs_timestamp ON usage_logs(timestamp);
     CREATE INDEX idx_daily_usage_date ON daily_usage(date);
+    CREATE INDEX idx_user_subscriptions_user_id ON user_subscriptions(user_id);
+    CREATE INDEX idx_rate_limits_identifier_action ON rate_limits(identifier, action);
+    CREATE INDEX idx_rate_limits_timestamp ON rate_limits(timestamp);
     """
     
     print("Creating database schema...")
